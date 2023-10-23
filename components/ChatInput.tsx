@@ -8,6 +8,7 @@ import { CornerDownLeft, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import React, { FC, HTMLAttributes, useContext, useRef, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
+import toast from "react-hot-toast";
 
 interface ChatInptuProps extends HTMLAttributes<HTMLDivElement> {}
 
@@ -32,6 +33,10 @@ const ChatInput: FC<ChatInptuProps> = ({ className, ...props }) => {
         },
         body: JSON.stringify({ messages: [message] }),
       });
+
+      if (!response.ok) {
+        throw new Error();
+      }
 
       return response.body;
     },
@@ -73,6 +78,12 @@ const ChatInput: FC<ChatInptuProps> = ({ className, ...props }) => {
       setTimeout(() => {
         textareaRef.current?.focus();
       }, 10);
+    },
+    onError(_, message) {
+      console.log("got called");
+      toast.error("Something went wrong. Please try again.");
+      removeMessage(message.id);
+      textareaRef.current?.focus();
     },
   });
 
