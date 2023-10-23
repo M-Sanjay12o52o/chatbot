@@ -1,19 +1,66 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { Message } from "@/lib/validators/message";
+import { useMutation } from "@tanstack/react-query";
+import { nanoid } from "nanoid";
 import React, { FC, HTMLAttributes, useState } from "react";
-import ReactTextareaAutosize from "react-textarea-autosize";
+import TextareaAutosize from "react-textarea-autosize";
 
 interface ChatInptuProps extends HTMLAttributes<HTMLDivElement> {}
 
 const ChatInput: FC<ChatInptuProps> = ({ className, ...props }) => {
   const [input, setInput] = useState<string>("");
 
+  const { mutate: sendMessage } = useMutation({
+    mutationFn: async (message: Message) => {
+      const response = await fetch("/api/message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: [message] }),
+      });
+
+      return response.body;
+    },
+    onSuccess: async (stream) => {
+      // console.log("Success");
+      // getting readable from the server
+      if (!stream) throw new Error("No stream found");
+
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value);
+        console.log(chunkValue);
+      }
+    },
+  });
+
   return (
     <div {...props} className={cn("border-t border-zinc-300", className)}>
       <div className="relative mt-4 flex-1 overflow-hidden rounded-lg border-none outline-none">
-        <ReactTextareaAutosize
+        <TextareaAutosize
           rows={2}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+
+              const message: Message = {
+                id: nanoid(),
+                isUserMessage: true,
+                text: input,
+              };
+
+              sendMessage(message);
+            }
+          }}
           maxRows={4}
           value={input}
           onChange={(e) => setInput(e.target.value)}
